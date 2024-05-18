@@ -10,7 +10,7 @@ import * as THREE from 'three';
 var scene, renderer;
 
 //RINGS
-var ring1, ring2, ring3, center_disk;
+var rings, ring1, ring2, ring3, center_disk;
 var ring1_animation = false;
 var ring2_animation = false;
 var ring3_animation = false;
@@ -81,25 +81,29 @@ function buildRing(obj, innerRadius, outerRadius, height, x, y, z, color) {
 
 // Carousel creation functions ----------------------------------------------------------------------------------
 
-function createRings() {
+function createRings(x, y, z) {
+    rings = new THREE.Object3D();
     ring1 = new THREE.Object3D();
     ring2 = new THREE.Object3D();
     ring3 = new THREE.Object3D();
     
-    buildRing(ring1, 20, 15, 5, 0, 0, 0, 0xFFFF00);
-    buildRing(ring2, 15, 10, 5, 0, 0, 0, 0x00FFFF);
-    buildRing(ring3, 10, 5, 5, 0, 0, 0, 0xFF00FF);
+    buildRing(ring3, 20, 15, 5, x, y, z, 0xFFFF00);
+    buildRing(ring2, 15, 10, 5, x, y, z, 0x00FFFF);
+    buildRing(ring1, 10, 5, 5, x, y, z, 0xFF00FF);
     // buildCylinder(carousel, 0, 12.5, 0, 5, 5, 5, 0x00FF00);
 
-    scene.add(ring1);
-    scene.add(ring2);
-    scene.add(ring3);
+    ring2.add(ring3);
+    ring1.add(ring2);
+    rings.add(ring1);
+    scene.add(rings);
+    rings.position.set(x, y, z);
+
     
 }
 
-function createDisk() {
+function createDisk(x, y, z) {
     center_disk = new THREE.Object3D();
-    buildCylinder(center_disk, 0, -2.5, 0, 5, 5, 5, 0x00FF00);
+    buildCylinder(center_disk, x, y, z, 5, 5, 5, 0x00FF00);
     scene.add(center_disk);
 
 }
@@ -109,8 +113,8 @@ function createCarousel(x, y, z) {
     var carousel = new THREE.Object3D();
     carousel.position.set(x, y, z);
     scene.add(carousel);
-    createRings();
-    createDisk();
+    createRings(0, 0, 0);
+    createDisk(0, -2.5, 0);
 
     
 }
@@ -282,7 +286,6 @@ function render() {
     renderer.render(scene, cameras[activeCameraNumber - 1]);
 }
 
-
 // Function to initialize the scene, camera, and renderer
 function init() {
     'use strict';
@@ -301,42 +304,54 @@ function init() {
     window.addEventListener("resize", onResize);
 }
 
+// Function to initialize the scene, camera, and renderer
+function ring3_animate() {
+    if (up3) ring3.position.y += 0.1;
+    else ring3.position.y -= 0.1;
+    const ring3WorldPosition = new THREE.Vector3();
+    ring3.getWorldPosition(ring3WorldPosition);
+    const ring2WorldPosition = new THREE.Vector3();
+    ring2.getWorldPosition(ring2WorldPosition);
 
-// Functions to animate the scene --------------------------------------------------------------------------------
-function ring1_animate() {
-    if (up1) ring1.position.y += 0.1;
-    else ring1.position.y -= 0.1;
-    if (ring1.position.y >= 15)
-        up1 = false;
-    else if (ring1.position.y <= 0)
-        up1 = true;
-    }
+    if (ring3WorldPosition.y >= ring2WorldPosition.y + 5)
+        up3 = false;
+    else if (ring3WorldPosition.y <= ring2WorldPosition.y - 5)
+        up3 = true;
+}
 
 function ring2_animate() {
     if (up2) ring2.position.y += 0.1;
     else ring2.position.y -= 0.1;
-    if (ring2.position.y >= 15)
-        up2 = false;
-    else if (ring2.position.y <= 0)
-        up2 = true;
-    }
+    const ring2WorldPosition = new THREE.Vector3();
+    ring2.getWorldPosition(ring2WorldPosition);
+    const ring1WorldPosition = new THREE.Vector3();
+    ring1.getWorldPosition(ring1WorldPosition);
 
-function ring3_animate() {
-    if (up3) ring3.position.y += 0.1;
-    else ring3.position.y -= 0.1;
-    if (ring3.position.y >= 15)
-        up3 = false;
-    else if (ring3.position.y <= 0)
-        up3 = true;
+    if (ring2WorldPosition.y >= ring1WorldPosition.y + 5)
+        up2 = false;
+    else if (ring2WorldPosition.y <= ring1WorldPosition.y - 5)
+        up2 = true;
+}
+
+function ring1_animate() {
+    if (up1) ring1.position.y += 0.1;
+    else ring1.position.y -= 0.1;
+    const ring1WorldPosition = new THREE.Vector3();
+    ring1.getWorldPosition(ring1WorldPosition);
+    const cdiskWorldPosition = new THREE.Vector3();
+    center_disk.getWorldPosition(cdiskWorldPosition);
+
+    if (ring1WorldPosition.y >= cdiskWorldPosition.y + 5)
+        up1 = false;
+    else if (ring1WorldPosition.y <= cdiskWorldPosition.y - 5)
+        up1 = true;
     }
 
 function carousel_movement() {
     if (ring1_animation) ring1_animate();
     if (ring2_animation) ring2_animate();
     if (ring3_animation) ring3_animate();
-    ring1.rotation.y += 0.01;
-    ring2.rotation.y += 0.01;
-    ring3.rotation.y += 0.01;
+    rings.rotation.y += 0.01;
     center_disk.rotation.y += 0.01;
     
 }
