@@ -12,7 +12,7 @@ import { ParametricGeometry } from 'three/addons/geometries/ParametricGeometry.j
 var scene, renderer;
 
 //RINGS
-var carousel, rings, innerRing, midRing, outerRing, center_disk;
+var carousel, rings, innerRing, midRing, outerRing, center_disk, mobius;
 var innerRing_animation = false;
 var midRing_animation = false;
 var outerRing_animation = false;
@@ -81,12 +81,14 @@ function buildRing(obj, outerRadius, innerRadius, height, x, y, z, color) {
 }
 
 function buildParametric(obj, x, y, z, parametricFunction, s) {
+    var parametric = new THREE.Object3D();
     const geometry = new ParametricGeometry(parametricFunction, 20, 20);
     const material = new THREE.MeshBasicMaterial({ color: 0x00FF00, wireframe: true });
     const para = new THREE.Mesh(geometry, material);
     para.scale.multiplyScalar(s);
-    para.position.set(x, y, z);
-    obj.add(para);
+    parametric.position.set(x, y, z);
+    parametric.add(para);
+    obj.add(parametric);
 }
 
 // Parametric functions -------------------------------------------------------------------------------------------
@@ -190,6 +192,18 @@ function twistedPlane(u, t, target) {
 
 // Carousel creation functions ------------------------------------------------------------------------------------
 //PARAMETRIC OBJECTS
+function createMobiusStrip(obj) {
+    mobius = new THREE.Object3D();
+    mobius.userData = { step: -Math.PI/2 };
+    var geometry = new ParametricGeometry(mobiusStrip, 20, 20);
+    var material = new THREE.MeshBasicMaterial({ color: 0xff9100, wireframe: true });
+    var mesh = new THREE.Mesh(geometry, material);
+    mesh.scale.multiplyScalar(1);
+    mesh.position.y = 2.75;
+    mobius.add(mesh);
+    obj.add(mobius);
+}
+
 function createParametricObjects(ring, radius) {
     const scalarDefault = 5;
     const functions = [
@@ -200,18 +214,17 @@ function createParametricObjects(ring, radius) {
         coneNoTopNoBase,
         irregularTiltedCone,
         hyperboloid,
-        twistedPlane,
-        mobiusStrip
+        twistedPlane
     ];
 
-    const positionsY = [1.5, 1.5, 1.5, 2, 5, 10, 2.5, 0, 2.5];
+    const positionsY = [1.5, 1.5, 1.5, 1.75, 1.75, 2, 2, 1.5];
     const scalars = [
-        3, 5, scalarDefault, 4, 
-        scalarDefault, 10, 8, scalarDefault, 2];
+        3, 5, scalarDefault, 3.5, 
+        3.5, 4, 4, 3];
 
-    for (let i = 0; i < 4; i++) {
-        const pos_x = radius * Math.cos(2 * i * Math.PI / 9);
-        const pos_z = radius * Math.sin(2 * i * Math.PI / 9);
+    for (let i = 0; i < 8; i++) {
+        const pos_x = radius * Math.cos(i * Math.PI / 4);
+        const pos_z = radius * Math.sin(i * Math.PI / 4);
         const pos_y = positionsY[i];
         const scalar = scalars[i];
         const func = functions[i];
@@ -230,9 +243,9 @@ function createRings(x, y, z) {
     buildRing(outerRing, 20 , 15, 5, x, y, z, 0xFFFF00);
     buildRing(midRing, 15, 10, 5, x, y, z, 0x00FFFF);
     buildRing(innerRing, 10, 5, 5, x, y, z, 0xFF00FF);
-    //createParametricObjects(outerRing, 17.5);
-    //createParametricObjects(midRing, 12.5);
-    //createParametricObjects(innerRing, 7.5);
+    createParametricObjects(outerRing, 17.5);
+    createParametricObjects(midRing, 12.5);
+    createParametricObjects(innerRing, 7.5);
 
     midRing.add(outerRing);
     innerRing.add(midRing);
@@ -247,6 +260,7 @@ function createRings(x, y, z) {
 function createDisk(x, y, z) {
     center_disk = new THREE.Object3D();
     buildCylinder(center_disk, x, y, z, 5, 5, 5, 0x00FF00);
+    createMobiusStrip(center_disk);
     carousel.add(center_disk);
 }
 
@@ -467,6 +481,22 @@ function init() {
     window.addEventListener("resize", onResize);
 }
 
+function mobius_animate(deltaTime) {
+    mobius.userData.step += 1.5 * deltaTime;
+    mobius.position.y = 1 * (Math.sin(mobius.userData.step) + 1);
+}
+
+function parametric_animate(deltaTime) {
+    const listRings = [innerRing, midRing, outerRing];
+    innerRing.children[1].rotation.y += 1 * deltaTime;
+
+
+    for (var i=1; i<9; i++) {
+        innerRing.children[i].rotation.x = Math.PI/4 * Math.cos(paramUp);
+        innerRing.children[i].rotation.z = Math.PI/4 * Math.sin(paramUp);
+    }
+}
+
 // Function to initialize the scene, camera, and renderer
 function outerRing_animate(deltaTime) {
     if (upOuter) outerRing.position.y += MOVEMENT_SPEED * deltaTime;
@@ -529,6 +559,7 @@ function animate() {
 
     requestAnimationFrame(animate);
     carousel_movement(deltaTime);
+    mobius_animate(deltaTime);
 
     render();
 }
