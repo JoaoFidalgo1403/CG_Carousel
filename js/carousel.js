@@ -230,7 +230,7 @@ function createRings(x, y, z) {
     buildRing(outerRing, 20 , 15, 5, x, y, z, 0xFFFF00);
     buildRing(midRing, 15, 10, 5, x, y, z, 0x00FFFF);
     buildRing(innerRing, 10, 5, 5, x, y, z, 0xFF00FF);
-    createParametricObjects(outerRing, 17.5);
+    //createParametricObjects(outerRing, 17.5);
     //createParametricObjects(midRing, 12.5);
     //createParametricObjects(innerRing, 7.5);
 
@@ -262,10 +262,35 @@ function createCarousel(x, y, z) {
 }
 
 
+//SKYDOME
+function createSkydome(x, y, z) {
+    const radius = 100;
+    const widthSegments = 32;
+    const heightSegments = 32;
+    const phiStart = 0;
+    const phiLength = Math.PI * 2;
+    const thetaStart = 0;
+    const thetaLength = Math.PI / 2; // Half sphere
+
+    const skyGeometry = new THREE.SphereGeometry(radius, widthSegments, heightSegments, phiStart, phiLength, thetaStart, thetaLength);
+    const textureLoader = new THREE.TextureLoader();
+    const texture = textureLoader.load('../OskarFischinger.png'); // Replace 'path/to/your/image.jpg' with the actual path to your image
+    texture.repeat.set(8, 4); // Repeat the texture 4 times in both directions
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    const skyMaterial = new THREE.MeshBasicMaterial({ map: texture, side: THREE.BackSide, wireframe: wireframe});
+    const skydome = new THREE.Mesh(skyGeometry, skyMaterial);
+    skydome.position.set(x, y, z); // Set the position of the skydome
+    scene.add(skydome);
+}
+
 //GROUND
-function createGround() {
-    var ground = new THREE.Mesh(new THREE.BoxGeometry(50, 50, 3).rotateX(-Math.PI * 0.5), new THREE.MeshBasicMaterial({color: new THREE.Color(0x875280).multiplyScalar(1.5), wireframe: wireframe}));
-    ground.position.set(0, -1.5, 0);
+function createGround(x, y, z) {
+    const groundGeometry = new THREE.PlaneGeometry(200, 200);
+    const groundMaterial = new THREE.MeshBasicMaterial({ color: 0x0000FF, side: THREE.DoubleSide, wireframe: wireframe});
+    const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+    ground.rotation.x = Math.PI / 2 ; // Rotate the ground to be horizontal
+    ground.position.set(x, y, z); // Set the position of the ground
     scene.add(ground);
 }
 
@@ -275,6 +300,8 @@ function createScene() {
     'use strict';
     scene = new THREE.Scene();
     scene.add(new THREE.AxesHelper(10));
+    createSkydome(0, -20, 0);
+    createGround(0, -20, 0);
     createCarousel(0, 0, 0);
 }
 
