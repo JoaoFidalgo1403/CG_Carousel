@@ -7,16 +7,14 @@
  */
 
 import * as THREE from 'three';
+//import { ParametricGeometry } from 'three/addons/geometries/ParametricGeometry.js';
 var scene, renderer;
 
 //RINGS
-var rings, ring1, ring2, ring3, center_disk;
-var ring1_animation = false;
-var ring2_animation = false;
-var ring3_animation = false;
-
-var up1 = true, up2 = true, up3 = true;
-
+var carousel;
+var innerRing_movement = false;
+var midRing_movement = false;
+var outerRing_movement = false;
 
 // Cameras
 var activeCameraNumber, camera1, camera2, camera3, camera4, camera5, camera6;
@@ -28,23 +26,15 @@ var wireframe = true;
 const clock = new THREE.Clock();
 
 // Movement constant variables
-const ROTATION_SPEED = 0.5;
-const MOVEMENT_SPEED = 4;
+const ROTATION_SPEED = 0.35;
+const MOVEMENT_SPEED = 5;
+const CLAW_SPEED = 0.6;
 
 // Define cameras array
 var cameras = [];
 
 
 // Builder functions ----------------------------------------------------------------------------------------------
-function buildBox(obj, x, y, z, width, height, length, color) {
-    'use strict'
-    var geometry = new THREE.BoxGeometry(width, height, length);
-    var material = new THREE.MeshBasicMaterial({ color: color, wireframe: wireframe })
-    var mesh = new THREE.Mesh(geometry, material);
-    mesh.position.set(x, y, z);
-    obj.add(mesh);
-}
-
 function buildCylinder(obj, x, y, z, height, radiusTop, radiusBottom, color) {
     'use strict';
     var geometry = new THREE.CylinderGeometry(radiusTop, radiusBottom, height, 50);
@@ -56,7 +46,7 @@ function buildCylinder(obj, x, y, z, height, radiusTop, radiusBottom, color) {
 
 function buildRing(obj, innerRadius, outerRadius, height, x, y, z, color) {
     'use strict';
-    
+
     var shape = new THREE.Shape();
     shape.absarc(0, 0, innerRadius, 0, Math.PI * 2, false); // Use innerRadius here
     var holePath = new THREE.Path();
@@ -79,55 +69,48 @@ function buildRing(obj, innerRadius, outerRadius, height, x, y, z, color) {
 
 
 // Carousel creation functions ----------------------------------------------------------------------------------
-
-function createRings(x, y, z) {
-    rings = new THREE.Object3D();
-    ring1 = new THREE.Object3D();
-    ring2 = new THREE.Object3D();
-    ring3 = new THREE.Object3D();
-    
-    buildRing(ring3, 20, 15, 5, x, y, z, 0xFFFF00);
-    buildRing(ring2, 15, 10, 5, x, y, z, 0x00FFFF);
-    buildRing(ring1, 10, 5, 5, x, y, z, 0xFF00FF);
-    // buildCylinder(carousel, 0, 12.5, 0, 5, 5, 5, 0x00FF00);
-
-    ring2.add(ring3);
-    ring1.add(ring2);
-    rings.add(ring1);
-    scene.add(rings);
-    rings.position.set(x, y, z);
-
-    
+function createInnerRing(obj) {
+    var innerRing = new THREE.Object3D();
+    innerRing.userData = { step: -Math.PI/2 };
+    buildRing(innerRing, 20, 15, 5, 0, 0, 0, 0xFFFF00);
+    obj.add(innerRing);
 }
 
-function createDisk(x, y, z) {
-    center_disk = new THREE.Object3D();
-    buildCylinder(center_disk, x, y, z, 5, 5, 5, 0x00FF00);
-    scene.add(center_disk);
+function createMidRing(obj) {
+    var midRing = new THREE.Object3D();
+    midRing.userData = { step: -Math.PI/2 };
+    buildRing(midRing, 15, 10, 5, 0, 0, 0, 0x00FFFF);
+    obj.add(midRing);
+}
 
+function createOuterRing(obj) {
+    var outerRing = new THREE.Object3D();
+    outerRing.userData = { step: -Math.PI/2 };
+    buildRing(outerRing, 10, 5, 5, 0, 0, 0, 0xFF00FF);
+    obj.add(outerRing);
+}
+
+function createDisks(obj) {
+    var center_disk = new THREE.Object3D();
+
+    createInnerRing(center_disk);
+    createMidRing(center_disk);
+    createOuterRing(center_disk);
+
+    buildCylinder(center_disk, 0, -2.5, 0, 5, 5, 5, 0x00FF00);
+
+    obj.add(center_disk);
 }
 
 //CAROUSEL
 function createCarousel(x, y, z) {
-    var carousel = new THREE.Object3D();
+    carousel = new THREE.Object3D();
+
+    createDisks(carousel);
+
     carousel.position.set(x, y, z);
     scene.add(carousel);
-    createRings(0, 0, 0);
-    createDisk(0, -2.5, 0);
-
-    
 }
-
-
-
-//GROUND
-function createGround() {
-    var ground = new THREE.Mesh(new THREE.BoxGeometry(50, 50, 3).rotateX(-Math.PI * 0.5), new THREE.MeshBasicMaterial({color: new THREE.Color(0x875280).multiplyScalar(1.5), wireframe: wireframe}));
-    ground.position.set(0, -1.5, 0);
-    scene.add(ground);
-}
-
-
 
 
 // Function to create scene ------------------------------------------------------------------------------------------
@@ -190,13 +173,13 @@ function onKeyUp(e) {
     switch (e.keyCode) {
         //CAMERA Switching 
         case 49:    // '1' key
-            ring1_animation = false; 
+            innerRing_movement = false; 
             break;
         case 50:    // '2' key
-            ring2_animation = false;
+            midRing_movement = false;
             break;
         case 51:    // '3' key
-            ring3_animation = false;
+            outerRing_movement = false;
         
     }
 
@@ -209,13 +192,13 @@ function onKeyDown(e) {
     'use strict';
     switch (e.keyCode) {
         case 49:    // '1' key
-            ring1_animation = true; 
+            innerRing_movement = true; 
             break;
         case 50:    // '2' key
-            ring2_animation = true;
+            midRing_movement = true;
             break;
         case 51:    // '3' key
-            ring3_animation = true;
+            outerRing_movement = true;
             break;
         //CAMERA Switching 
         case 52:    // '4' key
@@ -285,6 +268,7 @@ function render() {
     renderer.render(scene, cameras[activeCameraNumber - 1]);
 }
 
+
 // Function to initialize the scene, camera, and renderer
 function init() {
     'use strict';
@@ -303,235 +287,48 @@ function init() {
     window.addEventListener("resize", onResize);
 }
 
-// Function to initialize the scene, camera, and renderer
-function ring3_animate(deltaTime) {
-    if (up3) ring3.position.y += MOVEMENT_SPEED * deltaTime;
-    else ring3.position.y -= MOVEMENT_SPEED * deltaTime;
-    const ring3WorldPosition = new THREE.Vector3();
-    ring3.getWorldPosition(ring3WorldPosition);
-    const ring2WorldPosition = new THREE.Vector3();
-    ring2.getWorldPosition(ring2WorldPosition);
 
-    if (ring3WorldPosition.y >= ring2WorldPosition.y + 5)
-        up3 = false;
-    else if (ring3WorldPosition.y <= ring2WorldPosition.y - 5)
-        up3 = true;
-}
-
-function ring2_animate(deltaTime) {
-    if (up2) ring2.position.y += MOVEMENT_SPEED * deltaTime;
-    else ring2.position.y -= MOVEMENT_SPEED * deltaTime;
-    const ring2WorldPosition = new THREE.Vector3();
-    ring2.getWorldPosition(ring2WorldPosition);
-    const ring1WorldPosition = new THREE.Vector3();
-    ring1.getWorldPosition(ring1WorldPosition);
-
-    if (ring2WorldPosition.y >= ring1WorldPosition.y + 5)
-        up2 = false;
-    else if (ring2WorldPosition.y <= ring1WorldPosition.y - 5)
-        up2 = true;
-}
-
-function ring1_animate(deltaTime) {
-    if (up1) ring1.position.y += MOVEMENT_SPEED * deltaTime;
-    else ring1.position.y -= MOVEMENT_SPEED * deltaTime;
-    const ring1WorldPosition = new THREE.Vector3();
-    ring1.getWorldPosition(ring1WorldPosition);
-    const cdiskWorldPosition = new THREE.Vector3();
-    center_disk.getWorldPosition(cdiskWorldPosition);
-
-    if (ring1WorldPosition.y >= cdiskWorldPosition.y + 5)
-        up1 = false;
-    else if (ring1WorldPosition.y <= cdiskWorldPosition.y - 5)
-        up1 = true;
+// Functions to animate the scene --------------------------------------------------------------------------------
+function innerRing_animate(deltaTime) {
+    const innerRing = carousel.children[0].children[0];
+    if (innerRing_movement) {
+        innerRing.userData.step += 0.75 * deltaTime;
+        innerRing.position.y = Math.abs(7.5 * (Math.sin(innerRing.userData.step) + 1));
     }
+}
+
+function midRing_animate(deltaTime) {
+    const midRing = carousel.children[0].children[1];
+    if (midRing_movement) {
+        midRing.userData.step += 0.75 * deltaTime;
+        midRing.position.y = Math.abs(7.5 * (Math.sin(midRing.userData.step) + 1));
+    }
+}
+
+function outerRing_animate(deltaTime) {
+    const outerRing = carousel.children[0].children[2];
+    if (outerRing_movement) {
+        outerRing.userData.step += 0.75 * deltaTime;
+        outerRing.position.y = Math.abs(7.5 * (Math.sin(outerRing.userData.step) + 1));
+    }
+}
 
 function carousel_movement(deltaTime) {
-    if (ring1_animation) ring1_animate(deltaTime);
-    if (ring2_animation) ring2_animate(deltaTime);
-    if (ring3_animation) ring3_animate(deltaTime);
-    rings.rotation.y += ROTATION_SPEED * deltaTime;
-    center_disk.rotation.y += ROTATION_SPEED * deltaTime;
-    
+    innerRing_animate(deltaTime);
+    midRing_animate(deltaTime);
+    outerRing_animate(deltaTime);
+
+    carousel.rotation.y += ROTATION_SPEED*deltaTime;    
 }
-
-
-/*function JibAnimation(deltaTime) {
-    if (rotateLeft) { // Rotate left [NO LIMIT]
-        topStruct.rotation.y -= ROTATION_SPEED * deltaTime;
-    }
-    if (rotateRight) { // Rotate right [NO LIMIT]
-        topStruct.rotation.y += ROTATION_SPEED * deltaTime;
-    }
-}
-
-function hookAnimation(deltaTime) {
-    if (moveDown && hook.position.y > MIN_HEIGHT && !blocked) {  // Move down
-        hook.position.y -= MOVEMENT_SPEED * deltaTime;
-        const scaleChangeFactor = MOVEMENT_SPEED / 14;
-        hook.children[0].scale.y += scaleChangeFactor * deltaTime;
-        hook.children[0].position.y += ((14 * scaleChangeFactor) / 2) * deltaTime;
-    }
-    if (moveUp && hook.position.y < MAX_HEIGHT) { // Move up
-        hook.position.y += MOVEMENT_SPEED * deltaTime;
-        const scaleChangeFactor = MOVEMENT_SPEED / 14;
-        hook.children[0].scale.y -= scaleChangeFactor * deltaTime;
-        hook.children[0].position.y -= ((14 * scaleChangeFactor) / 2) * deltaTime;
-    }
-}
-
-function kartAnimation(deltaTime) {
-    if (moveBackward && kart.position.z > MIN_SLIDE) { // Move backward
-        kart.position.z -= MOVEMENT_SPEED * deltaTime;
-    }
-    if (moveForward && kart.position.z < MAX_SLIDE) { // Move forward
-        kart.position.z += MOVEMENT_SPEED * deltaTime;
-    }
-}
-
-function clawsAnimation(deltaTime) {
-    if (openClaws && -claws.children[0].rotation.x < MAX_CLAW_OPENING) { // Open claws
-        claws.children[0].rotation.x -= CLAW_SPEED * deltaTime;
-        claws.children[1].rotation.x += CLAW_SPEED * deltaTime; 
-        claws.children[2].rotation.z += CLAW_SPEED * deltaTime; 
-        claws.children[3].rotation.z -= CLAW_SPEED * deltaTime; 
-    }
-
-    if (closeClaws && -claws.children[0].rotation.x > MIN_CLAW_OPENING) {   // Close claws
-        claws.children[0].rotation.x += CLAW_SPEED * deltaTime; 
-        claws.children[1].rotation.x -= CLAW_SPEED * deltaTime; 
-        claws.children[2].rotation.z -= CLAW_SPEED * deltaTime; 
-        claws.children[3].rotation.z += CLAW_SPEED * deltaTime;  
-    }
-}
-
-
-//Release object animation -----------------------------------------------------------------------------------------
-function moveObjectClaws(deltaTime) {
-    if (-claws.children[0].rotation.x < MAX_CLAW_OPENING) { // Open claws
-        claws.children[0].rotation.x -= CLAW_SPEED * deltaTime;
-        claws.children[1].rotation.x += CLAW_SPEED * deltaTime; 
-        claws.children[2].rotation.z += CLAW_SPEED * deltaTime; 
-        claws.children[3].rotation.z -= CLAW_SPEED * deltaTime; 
-        return false;
-    }
-    return true;
-}
-
-function moveObjectHook(deltaTime){
-    if(hook.position.y < -10) { // Move up
-        hook.position.y += MOVEMENT_SPEED * deltaTime;
-        const scaleChangeFactor = MOVEMENT_SPEED / 14;
-        hook.children[0].scale.y -= scaleChangeFactor * deltaTime;
-        hook.children[0].position.y -= ((14 * scaleChangeFactor) / 2) * deltaTime;
-        return false;
-    } 
-    return true;
-}
-
-function moveObjectKart(deltaTime) {
-    var kartFinalPos = Math.sqrt(Math.pow(crate.position.x, 2) + 
-        Math.pow(crate.position.z, 2));
-
-    const threshold = 0.05; // Adjust this threshold as needed
-
-    const roundedKartPos = Math.round(kart.position.z * 100) / 100;
-    const roundedFinalPos = Math.round(kartFinalPos * 100) / 100;
-
-    if (Math.abs(roundedKartPos - roundedFinalPos) > threshold) {
-        if (kart.position.z > kartFinalPos) { // Move backward
-            kart.position.z -= MOVEMENT_SPEED * deltaTime;
-        }
-        if (kart.position.z < kartFinalPos) {  // Move forward
-            kart.position.z += MOVEMENT_SPEED * deltaTime;
-        }
-        return false;
-    } 
-    return true;
-}
-
-function moveObjectJib(deltaTime) {
-    const angleToCrate = Math.atan2(crate.position.x, crate.position.z);
-    const normalizedRotation = (topStruct.rotation.y % (2 * Math.PI) + (2 * Math.PI)) % (2 * Math.PI);
-
-    let shortestAngle = angleToCrate - normalizedRotation;
-    if (shortestAngle > Math.PI) {
-        shortestAngle -= 2 * Math.PI;
-    } else if (shortestAngle < -Math.PI) {
-        shortestAngle += 2 * Math.PI;
-    }
-
-    let rotationDirection = Math.sign(shortestAngle);
-
-    if (Math.abs(shortestAngle) > ROTATION_SPEED * deltaTime) {
-        topStruct.rotation.y += rotationDirection * ROTATION_SPEED * deltaTime; //Rotate if the rotation is bigger than the rotation step
-        return false;
-    } else {
-        topStruct.rotation.y = angleToCrate; // Keeps the position static if the rotation is too little (lower than the rotation step)
-        return true;
-    }
-}
-
-function releaseObject(deltaTime) {
-    var minY = caughtObject.height + 0.25; 
-    if(caughtObject.position.y > minY) {
-        if (caughtObject.position.y - fallingSpeed * deltaTime <= minY) 
-            caughtObject.position.y -= caughtObject.position.y - minY;         
-        else caughtObject.position.y -= fallingSpeed * deltaTime;
-        fallingSpeed *= 1.1;
-    } else {
-        scene.remove(caughtObject);
-        release = false;
-        fallingSpeed = MOVEMENT_SPEED;
-    }
-
-}
-
-function moveObject(deltaTime) {
-    if (moveObjectHook(deltaTime)) {
-        var kartCond = moveObjectKart(deltaTime);
-        var jibCond = moveObjectJib(deltaTime);
-
-        if(kartCond && jibCond) {
-            if(moveObjectClaws(deltaTime)){
-                objectCaught = false;
-            }    
-        }
-    }
-
-    if (readyForRelease) {
-        var worldRotation = new THREE.Quaternion();
-        caughtObject.getWorldQuaternion(worldRotation);
-        // Remove the object from the hook
-        hook.remove(caughtObject);
-
-        var worldPosition = new THREE.Vector3();
-        hook.getWorldPosition(worldPosition);
-
-        caughtObject.position.copy(worldPosition);
-
-        // hook_box_height/2 + object_hb_radius + hook_top_hb_radius  
-        caughtObject.position.y -= 1 + caughtObject.children[1].geometry.parameters.radius + 0.5; 
-
-        scene.add(caughtObject);
-        caughtObject.setRotationFromQuaternion(worldRotation);
-        
-        readyForRelease = false;
-        release = true;
-    }
-
-    if (release) releaseObject(deltaTime);
-}*/
 
 
 function animate() {
     'use strict';
     const deltaTime = clock.getDelta();
-
-    requestAnimationFrame(animate);
     carousel_movement(deltaTime);
 
     render();
+    requestAnimationFrame(animate);
 }
 
 // Initialize the scene
