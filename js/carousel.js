@@ -19,6 +19,7 @@ var outerRing_animation = false;
 
 var upInner = true, upMid = true, upOuter = true;
 
+var angleGeneric = Math.PI/2;
 
 // Cameras
 var activeCameraNumber, camera1, camera2, camera3, camera4, camera5, camera6;
@@ -32,6 +33,7 @@ const clock = new THREE.Clock();
 // Movement constant variables
 const ROTATION_SPEED = 0.5;
 const MOVEMENT_SPEED = 4;
+const PARAM_SPEED = 0.75;
 
 // Define cameras array
 var cameras = [];
@@ -81,14 +83,12 @@ function buildRing(obj, outerRadius, innerRadius, height, x, y, z, color) {
 }
 
 function buildParametric(obj, x, y, z, parametricFunction, s) {
-    var parametric = new THREE.Object3D();
     const geometry = new ParametricGeometry(parametricFunction, 20, 20);
-    const material = new THREE.MeshBasicMaterial({ color: 0x00FF00, wireframe: true });
+    const material = new THREE.MeshBasicMaterial({ color: 0x00FF00, side: THREE.DoubleSide, wireframe: true });
     const para = new THREE.Mesh(geometry, material);
     para.scale.multiplyScalar(s);
-    parametric.position.set(x, y, z);
-    parametric.add(para);
-    obj.add(parametric);
+    para.position.set(x, y, z);
+    obj.add(para);
 }
 
 // Parametric functions -------------------------------------------------------------------------------------------
@@ -205,7 +205,6 @@ function createMobiusStrip(obj) {
 }
 
 function createParametricObjects(ring, radius) {
-    const scalarDefault = 5;
     const functions = [
         cylinderHollow,
         irregularCylinder,
@@ -217,10 +216,8 @@ function createParametricObjects(ring, radius) {
         twistedPlane
     ];
 
-    const positionsY = [1.5, 1.5, 1.5, 1.75, 1.75, 2, 2, 1.5];
-    const scalars = [
-        3, 5, scalarDefault, 3.5, 
-        3.5, 4, 4, 3];
+    const positionsY = [1.5, 1.5, 1.3, 1.75, 1.75, 2, 2, 1.425];
+    const scalars = [3, 5, 4.3, 3.5, 3.5, 4, 4, 2.75];
 
     for (let i = 0; i < 8; i++) {
         const pos_x = radius * Math.cos(i * Math.PI / 4);
@@ -362,7 +359,7 @@ function createCameras() {
     cameras.push(camera5);
     cameras.push(camera6);
 
-    activeCameraNumber = 1; 
+    activeCameraNumber = 5; 
 }
 
 // Function to handle key presses
@@ -487,13 +484,11 @@ function mobius_animate(deltaTime) {
 }
 
 function parametric_animate(deltaTime) {
-    const listRings = [innerRing, midRing, outerRing];
-    innerRing.children[1].rotation.y += 1 * deltaTime;
-
 
     for (var i=1; i<9; i++) {
-        innerRing.children[i].rotation.x = Math.PI/4 * Math.cos(paramUp);
-        innerRing.children[i].rotation.z = Math.PI/4 * Math.sin(paramUp);
+        innerRing.children[i].rotation.y += PARAM_SPEED * deltaTime;
+        midRing.children[i].rotation.y -= PARAM_SPEED * deltaTime;
+        outerRing.children[i].rotation.y += PARAM_SPEED * deltaTime;
     }
 }
 
@@ -557,9 +552,12 @@ function animate() {
     'use strict';
     const deltaTime = clock.getDelta();
 
+    angleGeneric += 1 * deltaTime;
+
     requestAnimationFrame(animate);
     carousel_movement(deltaTime);
     mobius_animate(deltaTime);
+    parametric_animate(deltaTime);
 
     render();
 }
