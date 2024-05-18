@@ -28,9 +28,8 @@ var wireframe = true;
 const clock = new THREE.Clock();
 
 // Movement constant variables
-const ROTATION_SPEED = 0.35;
-const MOVEMENT_SPEED = 5;
-const CLAW_SPEED = 0.6;
+const ROTATION_SPEED = 0.5;
+const MOVEMENT_SPEED = 4;
 
 // Define cameras array
 var cameras = [];
@@ -305,9 +304,9 @@ function init() {
 }
 
 // Function to initialize the scene, camera, and renderer
-function ring3_animate() {
-    if (up3) ring3.position.y += 0.1;
-    else ring3.position.y -= 0.1;
+function ring3_animate(deltaTime) {
+    if (up3) ring3.position.y += MOVEMENT_SPEED * deltaTime;
+    else ring3.position.y -= MOVEMENT_SPEED * deltaTime;
     const ring3WorldPosition = new THREE.Vector3();
     ring3.getWorldPosition(ring3WorldPosition);
     const ring2WorldPosition = new THREE.Vector3();
@@ -319,9 +318,9 @@ function ring3_animate() {
         up3 = true;
 }
 
-function ring2_animate() {
-    if (up2) ring2.position.y += 0.1;
-    else ring2.position.y -= 0.1;
+function ring2_animate(deltaTime) {
+    if (up2) ring2.position.y += MOVEMENT_SPEED * deltaTime;
+    else ring2.position.y -= MOVEMENT_SPEED * deltaTime;
     const ring2WorldPosition = new THREE.Vector3();
     ring2.getWorldPosition(ring2WorldPosition);
     const ring1WorldPosition = new THREE.Vector3();
@@ -333,9 +332,9 @@ function ring2_animate() {
         up2 = true;
 }
 
-function ring1_animate() {
-    if (up1) ring1.position.y += 0.1;
-    else ring1.position.y -= 0.1;
+function ring1_animate(deltaTime) {
+    if (up1) ring1.position.y += MOVEMENT_SPEED * deltaTime;
+    else ring1.position.y -= MOVEMENT_SPEED * deltaTime;
     const ring1WorldPosition = new THREE.Vector3();
     ring1.getWorldPosition(ring1WorldPosition);
     const cdiskWorldPosition = new THREE.Vector3();
@@ -347,12 +346,12 @@ function ring1_animate() {
         up1 = true;
     }
 
-function carousel_movement() {
-    if (ring1_animation) ring1_animate();
-    if (ring2_animation) ring2_animate();
-    if (ring3_animation) ring3_animate();
-    rings.rotation.y += 0.01;
-    center_disk.rotation.y += 0.01;
+function carousel_movement(deltaTime) {
+    if (ring1_animation) ring1_animate(deltaTime);
+    if (ring2_animation) ring2_animate(deltaTime);
+    if (ring3_animation) ring3_animate(deltaTime);
+    rings.rotation.y += ROTATION_SPEED * deltaTime;
+    center_disk.rotation.y += ROTATION_SPEED * deltaTime;
     
 }
 
@@ -530,7 +529,7 @@ function animate() {
     const deltaTime = clock.getDelta();
 
     requestAnimationFrame(animate);
-    carousel_movement();
+    carousel_movement(deltaTime);
 
     render();
 }
