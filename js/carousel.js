@@ -196,7 +196,7 @@ function createMobiusStrip(obj) {
     mobius = new THREE.Object3D();
     mobius.userData = { step: -Math.PI/2 };
     var geometry = new ParametricGeometry(mobiusStrip, 20, 20);
-    var material = new THREE.MeshBasicMaterial({ color: 0xff9100, wireframe: true });
+    var material = new THREE.MeshBasicMaterial({ color: 0xff9100, side: THREE.DoubleSide, wireframe: true });
     var mesh = new THREE.Mesh(geometry, material);
     mesh.scale.multiplyScalar(1);
     mesh.position.y = 2.75;
