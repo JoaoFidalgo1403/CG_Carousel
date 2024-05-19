@@ -27,8 +27,17 @@ var activeCameraNumber, camera1, camera2, camera3, camera4, camera5, camera6;
 //LIGHT
 var directionalLight, pointLights = [], spotLights = [];
 
+var materialTypes = [
+    THREE.MeshLambertMaterial,
+    THREE.MeshPhongMaterial,
+    THREE.MeshToonMaterial,
+    THREE.MeshNormalMaterial,
+    THREE.MeshBasicMaterial
+];
+var currentMaterialIndex = 0;
+
 // Objects visibility
-var wireframe = true;
+var wireframe = false;
 
 // Graphic's clock 
 const clock = new THREE.Clock();
@@ -46,7 +55,7 @@ var cameras = [];
 function buildBox(obj, x, y, z, width, height, length, color) {
     'use strict'
     var geometry = new THREE.BoxGeometry(width, height, length);
-    var material = new THREE.MeshBasicMaterial({ color: color, wireframe: wireframe })
+    var material = new materialTypes[currentMaterialIndex]({ color: color, wireframe: wireframe })
     var mesh = new THREE.Mesh(geometry, material);
     mesh.position.set(x, y, z);
     obj.add(mesh);
@@ -55,7 +64,7 @@ function buildBox(obj, x, y, z, width, height, length, color) {
 function buildCylinder(obj, x, y, z, height, radiusTop, radiusBottom, color) {
     'use strict';
     var geometry = new THREE.CylinderGeometry(radiusTop, radiusBottom, height, 50);
-    var material = new THREE.MeshBasicMaterial({ color: color, wireframe: wireframe })
+    var material = new materialTypes[currentMaterialIndex]({ color: color, wireframe: wireframe })
     var mesh = new THREE.Mesh(geometry, material);
     mesh.position.set(x, y, z);
     obj.add(mesh);
@@ -78,7 +87,7 @@ function buildRing(obj, outerRadius, innerRadius, height, x, y, z, color) {
     };
 
     var geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
-    var material = new THREE.MeshBasicMaterial({ color: color, wireframe: wireframe });
+    var material = new materialTypes[currentMaterialIndex]({ color: color, wireframe: wireframe });
     var mesh = new THREE.Mesh(geometry, material);
     mesh.rotation.x = Math.PI / 2;
     mesh.position.set(x, y, z);
@@ -87,7 +96,7 @@ function buildRing(obj, outerRadius, innerRadius, height, x, y, z, color) {
 
 function buildParametric(obj, x, y, z, parametricFunction, s) {
     const geometry = new ParametricGeometry(parametricFunction, 20, 20);
-    const material = new THREE.MeshBasicMaterial({ color: 0x00FF00, side: THREE.DoubleSide, wireframe: true });
+    const material = new materialTypes[currentMaterialIndex]({ color: 0x00FF00, side: THREE.DoubleSide, wireframe: wireframe });
     const para = new THREE.Mesh(geometry, material);
     para.scale.multiplyScalar(s);
     para.position.set(x, y, z);
@@ -199,8 +208,9 @@ function createMobiusStrip(obj) {
     mobius = new THREE.Object3D();
     mobius.userData = { step: -Math.PI/2 };
     var geometry = new ParametricGeometry(mobiusStrip, 20, 20);
-    var material = new THREE.MeshBasicMaterial({ color: 0xff9100, side: THREE.DoubleSide, wireframe: true });
+    var material = new materialTypes[currentMaterialIndex]({ color: 0xff9100, side: THREE.DoubleSide, wireframe: wireframe });
     var mesh = new THREE.Mesh(geometry, material);
+    mesh.name = "Mobius";
     mesh.scale.multiplyScalar(1);
     mesh.position.y = 2.75;
     mobius.add(mesh);
@@ -313,7 +323,7 @@ function createGround(x, y, z) {
 function createScene() {
     'use strict';
     scene = new THREE.Scene();
-    scene.add(new THREE.AxesHelper(10));
+    //scene.add(new THREE.AxesHelper(10));
     createSkydome(0, -20, 0);
     createGround(0, -20, 0);
     createCarousel(0, 0, 0);
@@ -377,20 +387,37 @@ function createLighting() {
     const ambientLight = new THREE.AmbientLight(0xffa500, 0.2); // Orange ambient light with low intensity
     scene.add(ambientLight);
 
+    for (let i = 0; i < 8; i++) {
+        const pointLight = new THREE.SpotLight(0xffffff, 1, 100,);
+        const pos_x = 5 * Math.cos(i * Math.PI / 4);
+        const pos_z = 5 * Math.sin(i * Math.PI / 4);
+        pointLight.position.set(pos_x, 0, pos_z);
+        center_disk.add(pointLight);
+        pointLights.push(pointLight);
+        const sphereSize = 1;
+        const pointLightHelper = new THREE.PointLightHelper( pointLight, sphereSize );
+        //center_disk.add( pointLightHelper );
+    }
 
     carousel.traverse(function (child) {
-        if (child instanceof THREE.Object3D && child.name.includes("Ring")) {
-            child.traverse(function (ringChild) {
-                if (ringChild instanceof THREE.Mesh && ringChild.name.includes("Parametric")) {
-                    const light = new THREE.SpotLight(0xffffff, 1, 100, Math.PI / 2);
-                    light.position.set(ringChild.position.x, ringChild.position.y - 2, ringChild.position.z); // Position the light below the ring
-                    light.target = ringChild;
-                    scene.add(light);
-                    spotLights.push(light);
-                }
-            });
+        if (child.isMesh && child.geometry.type == 'ParametricGeometry') {
+            const spotLight = new THREE.SpotLight(0xffffff, 1, 100, Math.PI / 3);
+            spotLight.target = child;
+            if (child.name == "Mobius") {
+                spotLight.position.set(child.position.x, 0, child.position.z); // Position the spotLight below the ring
+                center_disk.add(spotLight);
+                //const spotLightHelper = new THREE.SpotLightHelper( spotLight );
+                //center_disk.add( spotLightHelper );
+            } else {
+                spotLight.position.set(child.position.x, 0, child.position.z);
+                child.parent.add(spotLight);
+                //const spotLightHelper = new THREE.SpotLightHelper( spotLight );
+                //child.parent.add( spotLightHelper );
+            }
+            spotLights.push(spotLight);
         }
     });
+        
 }
 
 
@@ -451,6 +478,7 @@ function onKeyDown(e) {
             });
             wireframe = !wireframe;
             break;
+        // LIGHTS 
         case 68:    // 'D' key
             directionalLight.visible = !directionalLight.visible;
             break;
@@ -465,8 +493,54 @@ function onKeyDown(e) {
                 spotLights[i].visible = !spotLights[i].visible;
             }
             break;
-    
+        // Material
+        case 81:    // 'Q' key
+            currentMaterialIndex = 0;
+            switchMaterial();
+            break;
+        case 87:    // 'W' key
+            currentMaterialIndex = 1;
+            switchMaterial();
+            break;
+        case 69:    // 'E' key
+            currentMaterialIndex = 2;
+            switchMaterial();
+            break;
+        case 82:    // 'R' key
+            currentMaterialIndex = 3;
+            switchMaterial();
+            break;
+        case 84:    // 'T' key
+            currentMaterialIndex = 4;
+            switchMaterial();
+            break;
         }
+        
+}
+
+function switchMaterial() {
+    carousel.traverse(function (node) {
+        if (node.isMesh) {
+            if (currentMaterialIndex == 3) {
+                node.material = new materialTypes[currentMaterialIndex]({ side: THREE.DoubleSide, wireframe: wireframe });
+            } else switch (node.geometry.type) {
+                case 'ParametricGeometry':
+                case 'CylinderGeometry':
+                    if (node.name == "Mobius")
+                        node.material = new materialTypes[currentMaterialIndex]({ color: 0xff9100, side: THREE.DoubleSide, wireframe: wireframe });
+                    else node.material = new materialTypes[currentMaterialIndex]({ color: 0x00FF00, side: THREE.DoubleSide, wireframe: wireframe });
+                    break;
+                case 'ExtrudeGeometry':
+                        if (node == outerRing.children[0])
+                            node.material = new materialTypes[currentMaterialIndex]({ color: 0xFFFF00, wireframe: wireframe });
+                        if (node == midRing.children[0])
+                            node.material = new materialTypes[currentMaterialIndex]({ color: 0x00FFFF, wireframe: wireframe });
+                        if (node == innerRing.children[0])
+                            node.material = new materialTypes[currentMaterialIndex]({ color: 0xFF00FF, wireframe: wireframe });
+                    break; 
+            }
+        }
+    });
 }
 
 // Function to resize the window
