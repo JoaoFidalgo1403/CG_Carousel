@@ -24,6 +24,9 @@ var angleGeneric = Math.PI/2;
 // Cameras
 var activeCameraNumber, camera1, camera2, camera3, camera4, camera5, camera6;
 
+//LIGHT
+var directionalLight, pointLights = [], spotLights = [];
+
 // Objects visibility
 var wireframe = true;
 
@@ -335,8 +338,9 @@ function createCameras() {
     camera2.position.set(100, 10, 0); 
     camera2.lookAt(0, 10, 0);
 
-    camera3= new THREE.OrthographicCamera(left, right, top, bottom, near, far);
-    camera3.position.set(0, 100, 0); 
+    //GOOD
+    camera3 = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 1, 1000);
+    camera3.position.set(0, 50, 0);
     camera3.lookAt(0, 0, 0);
 
     camera4 = new THREE.OrthographicCamera(left-10, right+10, top+10, bottom-10, near, far);
@@ -361,6 +365,35 @@ function createCameras() {
 
     activeCameraNumber = 5; 
 }
+
+// Function to create global lighting
+function createLighting() {
+    // Directional light
+    directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+    directionalLight.position.set(20, 20, 20); // Set the position of the light
+    scene.add(directionalLight);
+
+    // Ambient light
+    const ambientLight = new THREE.AmbientLight(0xffa500, 0.2); // Orange ambient light with low intensity
+    scene.add(ambientLight);
+
+
+    carousel.traverse(function (child) {
+        if (child instanceof THREE.Object3D && child.name.includes("Ring")) {
+            child.traverse(function (ringChild) {
+                if (ringChild instanceof THREE.Mesh && ringChild.name.includes("Parametric")) {
+                    const light = new THREE.SpotLight(0xffffff, 1, 100, Math.PI / 2);
+                    light.position.set(ringChild.position.x, ringChild.position.y - 2, ringChild.position.z); // Position the light below the ring
+                    light.target = ringChild;
+                    scene.add(light);
+                    spotLights.push(light);
+                }
+            });
+        }
+    });
+}
+
+
 
 // Function to handle key presses
 function onKeyUp(e) {
@@ -418,6 +451,20 @@ function onKeyDown(e) {
             });
             wireframe = !wireframe;
             break;
+        case 68:    // 'D' key
+            directionalLight.visible = !directionalLight.visible;
+            break;
+
+        case 80:    // 'P' key
+            for (let i = 0; i < pointLights.length; i++) {
+                pointLights[i].visible = !pointLights[i].visible;
+            }
+            break;
+        case 83:    // 'S' key
+            for (let i = 0; i < spotLights.length; i++) {
+                spotLights[i].visible = !spotLights[i].visible;
+            }
+            break;
     
         }
 }
@@ -471,6 +518,7 @@ function init() {
 
     createCameras(); // Create the camera
     createScene(); // Create the scene
+    createLighting();
     // Highlight the active camera and wireframe initially
     // updateHUD('', true, activeCameraNumber); // Highlight the active camera
     document.addEventListener("keydown", onKeyDown); // Add event listener for key presses
