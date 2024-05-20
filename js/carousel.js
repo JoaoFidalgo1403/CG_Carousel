@@ -8,6 +8,7 @@
 
 import * as THREE from 'three';
 import { ParametricGeometry } from 'three/addons/geometries/ParametricGeometry.js';
+import { VRButton } from 'three/addons/webxr/VRButton.js';
 
 var scene, renderer;
 
@@ -22,7 +23,7 @@ var upInner = true, upMid = true, upOuter = true;
 var angleGeneric = Math.PI/2;
 
 // Cameras
-var activeCameraNumber, camera1, camera2, camera3, camera4, camera5, camera6;
+var activeCameraNumber, camera1, camera2;
 
 //LIGHT
 var directionalLight, pointLights = [], spotLights = [];
@@ -333,47 +334,21 @@ function createScene() {
 // Function to create cameras
 function createCameras() {
     'use strict';
-    var left = window.innerWidth / -28; 
-    var right = window.innerWidth / 28; 
-    var top = window.innerHeight / 28; 
-    var bottom = window.innerHeight / -28; 
-    var near = 1; 
-    var far = 2000; 
 
-    camera1= new THREE.OrthographicCamera(left, right, top, bottom, near, far);
-    camera1.position.set(0, 10, 100); 
-    camera1.lookAt(0, 10, 0);
+    camera1 = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera1.position.set(0, 1.6, 3); // Adjust as needed
+    document.body.appendChild(VRButton.createButton(renderer));
+    renderer.xr.enabled = true;
 
-    camera2= new THREE.OrthographicCamera(left, right, top, bottom, near, far);
-    camera2.position.set(100, 10, 0); 
-    camera2.lookAt(0, 10, 0);
+    camera2 = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 1, 1000);
+    camera2.position.set(0, 50, 0);
+    camera2.lookAt(0, 0, 0);
 
-    //GOOD
-    camera3 = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 1, 1000);
-    camera3.position.set(0, 50, 0);
-    camera3.lookAt(0, 0, 0);
-
-    camera4 = new THREE.OrthographicCamera(left-10, right+10, top+10, bottom-10, near, far);
-    camera4.position.set(30, 30, 30);
-    camera4.lookAt(0, 0, 0);
-
-    camera5 = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 1, 1000);
-    camera5.position.set(30, 30, 30);
-    camera5.lookAt(0, 0, 0);
-
-    camera6 = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 1, 1000);
-    camera6.position.set(0, -1, 0);  // Set initial position, adjust as needed
-    camera6.lookAt(0, -15, 0);
-    camera6.rotation.z = Math.PI;
 
     cameras.push(camera1);
     cameras.push(camera2);
-    cameras.push(camera3);
-    cameras.push(camera4);
-    cameras.push(camera5);
-    cameras.push(camera6);
 
-    activeCameraNumber = 5; 
+    activeCameraNumber = 2; 
 }
 
 // Function to create global lighting
@@ -460,15 +435,7 @@ function onKeyDown(e) {
         case 53:    // '5' key
             activeCameraNumber = 2;
             break;
-        case 54:    // '6' key
-            activeCameraNumber = 3;
-            break;
-        case 55:    // '7' key
-            activeCameraNumber = 4;
-            break;
-        case 56:    // '8' key
-            activeCameraNumber = 5;
-            break;
+        
         // WIREFRAME activation
         case 57:    // '9' key
             scene.traverse(function (node) {
@@ -551,24 +518,7 @@ function onResize() {
     // Update camera aspect ratio
     const aspect = window.innerWidth / window.innerHeight;
     var camera = cameras[activeCameraNumber - 1];
-
-    // For orthographic cameras
-    if (camera instanceof THREE.OrthographicCamera) {
-        // Calculate the new dimensions of the orthographic camera
-        const frustumHeight = camera.top - camera.bottom;
-        const frustumWidth = frustumHeight * aspect;
-
-        // Set new camera dimensions
-        camera.left = -frustumWidth / 2;
-        camera.right = frustumWidth / 2;
-        camera.top = frustumHeight / 2;
-        camera.bottom = -frustumHeight / 2;
-    } 
-    // For perspective cameras
-    else if (camera instanceof THREE.PerspectiveCamera) {
-        // Update camera aspect ratio
-        camera.aspect = aspect;
-}
+    camera.aspect = aspect;
 
     // Update camera projection matrix
     camera.updateProjectionMatrix();
@@ -579,6 +529,11 @@ function onResize() {
 function render() {
     'use strict';
     renderer.render(scene, cameras[activeCameraNumber - 1]);
+    renderer.setAnimationLoop( function () {
+
+        renderer.render( scene, camera );
+    
+    } );
 }
 
 // Function to initialize the scene, camera, and renderer
@@ -593,9 +548,7 @@ function init() {
     createCameras(); // Create the camera
     createScene(); // Create the scene
     createLighting();
-    // Highlight the active camera and wireframe initially
-    // updateHUD('', true, activeCameraNumber); // Highlight the active camera
-    document.addEventListener("keydown", onKeyDown); // Add event listener for key presses
+    document.addEventListener("keydown", onKeyDown);
     document.addEventListener("keyup", onKeyUp);
     window.addEventListener("resize", onResize);
 }
