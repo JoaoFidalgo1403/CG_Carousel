@@ -52,6 +52,9 @@ const PARAM_SPEED = 0.75;
 // Define cameras array
 var cameras = [];
 
+// Declarate skydome's texture variable
+var skydomeTexture;
+
 
 // Builder functions ----------------------------------------------------------------------------------------------
 function buildBox(obj, x, y, z, width, height, length, color) {
@@ -299,12 +302,12 @@ function createSkydome(x, y, z) {
     const thetaLength = Math.PI / 2; // Half sphere
 
     const skyGeometry = new THREE.SphereGeometry(radius, widthSegments, heightSegments, phiStart, phiLength, thetaStart, thetaLength);
-    const textureLoader = new THREE.TextureLoader();
-    const texture = textureLoader.load('../OskarFischinger.png'); // Replace 'path/to/your/image.jpg' with the actual path to your image
-    texture.repeat.set(8, 4); // Repeat the texture 4 times in both directions
-    texture.wrapS = THREE.RepeatWrapping;
-    texture.wrapT = THREE.RepeatWrapping;
-    const skyMaterial = new materialTypes[currentMaterialIndex]({ map: texture, side: THREE.BackSide, wireframe: wireframe});
+    const skydomeTextureLoader = new THREE.TextureLoader();
+    skydomeTexture = skydomeTextureLoader.load('../OskarFischinger.png');
+    skydomeTexture.repeat.set(8, 4);
+    skydomeTexture.wrapS = THREE.RepeatWrapping;
+    skydomeTexture.wrapT = THREE.RepeatWrapping;
+    const skyMaterial = new materialTypes[currentMaterialIndex]({ map: skydomeTexture, side: THREE.BackSide, wireframe: wireframe});
     const skydome = new THREE.Mesh(skyGeometry, skyMaterial);
     skydome.position.set(x, y, z); // Set the position of the skydome
     scene.add(skydome);
@@ -500,22 +503,19 @@ function switchMaterial() {
                     else node.material = new materialTypes[currentMaterialIndex]({ color: 0x00FF00, side: THREE.DoubleSide, wireframe: wireframe });
                     break;
                 case 'ExtrudeGeometry':
-                        if (node == outerRing.children[0])
-                            node.material = new materialTypes[currentMaterialIndex]({ color: 0xFFFF00, wireframe: wireframe });
-                        if (node == midRing.children[0])
-                            node.material = new materialTypes[currentMaterialIndex]({ color: 0x00FFFF, wireframe: wireframe });
-                        if (node == innerRing.children[0])
-                            node.material = new materialTypes[currentMaterialIndex]({ color: 0xFF00FF, wireframe: wireframe });
+                    if (node == outerRing.children[0])
+                        node.material = new materialTypes[currentMaterialIndex]({ color: 0xFFFF00, wireframe: wireframe });
+                    if (node == midRing.children[0])
+                        node.material = new materialTypes[currentMaterialIndex]({ color: 0x00FFFF, wireframe: wireframe });
+                    if (node == innerRing.children[0])
+                        node.material = new materialTypes[currentMaterialIndex]({ color: 0xFF00FF, wireframe: wireframe });
                     break; 
-                case 'PlaneGeometry':
-                    node.material = new materialTypes[currentMaterialIndex]({ color: 0x0000FF, side: THREE.DoubleSide, wireframe: wireframe});
-                    break;
-                case 'SpehereGeometry':
-                    break;
-
             }
         }
     });
+
+    scene.children[0].material = new materialTypes[currentMaterialIndex]({ map: skydomeTexture, side: THREE.BackSide, wireframe: wireframe});   // Skydome
+    scene.children[1].material = new materialTypes[currentMaterialIndex]({ color: 0x0000FF, side: THREE.DoubleSide, wireframe: wireframe});     // Plane
 }
 
 // Function to resize the window
