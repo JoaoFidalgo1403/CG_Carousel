@@ -303,7 +303,7 @@ function createSkydome(x, y, z) {
     texture.repeat.set(8, 4); // Repeat the texture 4 times in both directions
     texture.wrapS = THREE.RepeatWrapping;
     texture.wrapT = THREE.RepeatWrapping;
-    const skyMaterial = new THREE.MeshBasicMaterial({ map: texture, side: THREE.BackSide, wireframe: wireframe});
+    const skyMaterial = new materialTypes[currentMaterialIndex]({ map: texture, side: THREE.BackSide, wireframe: wireframe});
     const skydome = new THREE.Mesh(skyGeometry, skyMaterial);
     skydome.position.set(x, y, z); // Set the position of the skydome
     scene.add(skydome);
@@ -312,7 +312,7 @@ function createSkydome(x, y, z) {
 //GROUND
 function createGround(x, y, z) {
     const groundGeometry = new THREE.PlaneGeometry(200, 200);
-    const groundMaterial = new THREE.MeshBasicMaterial({ color: 0x0000FF, side: THREE.DoubleSide, wireframe: wireframe});
+    const groundMaterial = new materialTypes[currentMaterialIndex]({ color: 0x0000FF, side: THREE.DoubleSide, wireframe: wireframe});
     const ground = new THREE.Mesh(groundGeometry, groundMaterial);
     ground.rotation.x = Math.PI / 2 ; // Rotate the ground to be horizontal
     ground.position.set(x, y, z); // Set the position of the ground
@@ -369,8 +369,7 @@ function createLighting() {
         pointLight.position.set(pos_x, 0, pos_z);
         center_disk.add(pointLight);
         pointLights.push(pointLight);
-        const sphereSize = 1;
-        const pointLightHelper = new THREE.PointLightHelper( pointLight, sphereSize );
+        //const pointLightHelper = new THREE.PointLightHelper( pointLight, 1 );
         //center_disk.add( pointLightHelper );
     }
 
@@ -378,12 +377,7 @@ function createLighting() {
         if (child.isMesh && child.geometry.type == 'ParametricGeometry') {
             const spotLight = new THREE.SpotLight(0xffffff, 1, 100, Math.PI / 3);
             spotLight.target = child;
-            if (child.name == "Mobius") {
-                spotLight.position.set(child.position.x, 0, child.position.z); // Position the spotLight below the ring
-                center_disk.add(spotLight);
-                //const spotLightHelper = new THREE.SpotLightHelper( spotLight );
-                //center_disk.add( spotLightHelper );
-            } else {
+            if (child.name != "Mobius") {
                 spotLight.position.set(child.position.x, 0, child.position.z);
                 child.parent.add(spotLight);
                 //const spotLightHelper = new THREE.SpotLightHelper( spotLight );
