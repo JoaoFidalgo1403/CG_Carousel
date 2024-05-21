@@ -36,6 +36,7 @@ var materialTypes = [
     THREE.MeshBasicMaterial
 ];
 var currentMaterialIndex = 0;
+var lastMaterialIndex = 0;
 
 // Objects visibility
 var wireframe = false;
@@ -335,20 +336,22 @@ function createScene() {
 function createCameras() {
     'use strict';
 
-    camera1 = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera1.position.set(0, 1.6, 3); // Adjust as needed
+    camera1 = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 1, 1000);
+    camera1.position.set(0, 50, 0);
+    camera1.lookAt(0, 0, 0);
+
+    camera2 = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera2.position.set(0, 1.6, 3); // Adjust as needed
     document.body.appendChild(VRButton.createButton(renderer));
     renderer.xr.enabled = true;
 
-    camera2 = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 1, 1000);
-    camera2.position.set(0, 50, 0);
-    camera2.lookAt(0, 0, 0);
+    
 
 
     cameras.push(camera1);
     cameras.push(camera2);
 
-    activeCameraNumber = 2; 
+    activeCameraNumber = 1; 
 }
 
 // Function to create global lighting
@@ -472,7 +475,12 @@ function onKeyDown(e) {
             switchMaterial();
             break;
         case 84:    // 'T' key
-            currentMaterialIndex = 4;
+            if(currentMaterialIndex != 4) {
+                lastMaterialIndex = currentMaterialIndex;
+                currentMaterialIndex = 4;
+            } else {
+                currentMaterialIndex = lastMaterialIndex;
+            }
             switchMaterial();
             break;
         }
@@ -499,6 +507,12 @@ function switchMaterial() {
                         if (node == innerRing.children[0])
                             node.material = new materialTypes[currentMaterialIndex]({ color: 0xFF00FF, wireframe: wireframe });
                     break; 
+                case 'PlaneGeometry':
+                    node.material = new materialTypes[currentMaterialIndex]({ color: 0x0000FF, side: THREE.DoubleSide, wireframe: wireframe});
+                    break;
+                case 'SpehereGeometry':
+                    break;
+
             }
         }
     });
@@ -525,7 +539,7 @@ function render() {
     renderer.render(scene, cameras[activeCameraNumber - 1]);
     renderer.setAnimationLoop( function () {
 
-        renderer.render( scene, camera );
+        renderer.render(scene, cameras[activeCameraNumber - 1]);
     
     } );
 }
