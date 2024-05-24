@@ -14,9 +14,9 @@ var scene, renderer;
 
 //RINGS
 var carousel, rings, innerRing, midRing, outerRing, center_disk, mobius;
-var innerRing_animation = false;
-var midRing_animation = false;
-var outerRing_animation = false;
+var innerRing_animation = true;
+var midRing_animation = true;
+var outerRing_animation = true;
 
 var upInner = true, upMid = true, upOuter = true;
 
@@ -55,6 +55,14 @@ var cameras = [];
 // Declarate skydome's texture variable
 var skydomeTexture;
 
+// Colors
+
+const ORANGE = 0xff9100;
+const LIGHT_BLUE = 0x00DCFF;
+const BRIGHT_ORANGE_RED = 0xFF5500;
+const WHITE = 0xFFFFFF;
+const BLUE = 0x0000FF;
+const BLACK = 0x000000;
 
 // Builder functions ----------------------------------------------------------------------------------------------
 function buildBox(obj, x, y, z, width, height, length, color) {
@@ -99,12 +107,15 @@ function buildRing(obj, outerRadius, innerRadius, height, x, y, z, color) {
     obj.add(mesh);
 }
 
-function buildParametric(obj, x, y, z, parametricFunction, s) {
+function buildParametric(obj, x, y, z, parametricFunction, s, rotString, color) {
     const geometry = new ParametricGeometry(parametricFunction, 20, 20);
-    const material = new materialTypes[currentMaterialIndex]({ color: 0x00FF00, side: THREE.DoubleSide, wireframe: wireframe });
+    const material = new materialTypes[currentMaterialIndex]({ color: color , side: THREE.DoubleSide, wireframe: wireframe });
     const para = new THREE.Mesh(geometry, material);
     para.scale.multiplyScalar(s);
     para.position.set(x, y, z);
+
+    para.rotationMode = rotString;
+
     obj.add(para);
 }
 
@@ -213,16 +224,16 @@ function createMobiusStrip(obj) {
     mobius = new THREE.Object3D();
     mobius.userData = { step: -Math.PI/2 };
     var geometry = new ParametricGeometry(mobiusStrip, 20, 20);
-    var material = new materialTypes[currentMaterialIndex]({ color: 0xff9100, side: THREE.DoubleSide, wireframe: wireframe });
+    var material = new materialTypes[currentMaterialIndex]({ color: ORANGE, side: THREE.DoubleSide, wireframe: wireframe });
     var mesh = new THREE.Mesh(geometry, material);
     mesh.name = "Mobius";
-    mesh.scale.multiplyScalar(1);
-    mesh.position.y = 2.75;
+    mesh.scale.multiplyScalar(1.5);
+    mesh.position.y = 8.75;    // center_disk.position.y + 2.75
     mobius.add(mesh);
     obj.add(mobius);
 }
 
-function createParametricObjects(ring, radius) {
+function createParametricObjects(ring, radius, ringScalar, color) {
     const functions = [
         cylinderHollow,
         irregularCylinder,
@@ -234,17 +245,20 @@ function createParametricObjects(ring, radius) {
         twistedPlane
     ];
 
+    const rotMode = [ 'X', 'Y', 'Z', 'XY', 'XZ', 'YZ', 'XYZ', '-XY' ];
+
     const positionsY = [1.5, 1.5, 1.3, 1.75, 1.75, 2, 2, 1.425];
     const scalars = [3, 5, 4.3, 3.5, 3.5, 4, 4, 2.75];
 
     for (let i = 0; i < 8; i++) {
         const pos_x = radius * Math.cos(i * Math.PI / 4);
         const pos_z = radius * Math.sin(i * Math.PI / 4);
-        const pos_y = positionsY[i];
-        const scalar = scalars[i];
+        const pos_y = ringScalar * positionsY[i];
+        const scalar = ringScalar * scalars[i];
         const func = functions[i];
+        const rotationString = rotMode[i];
 
-        buildParametric(ring, pos_x, pos_y, pos_z, func, scalar);
+        buildParametric(ring, pos_x, pos_y + 1, pos_z, func, scalar, rotationString, color);
     }
 }
 
@@ -255,26 +269,24 @@ function createRings(x, y, z) {
     midRing = new THREE.Object3D();
     outerRing = new THREE.Object3D();
     
-    buildRing(outerRing, 20 , 15, 5, x, y, z, 0xFFFF00);
-    buildRing(midRing, 15, 10, 5, x, y, z, 0x00FFFF);
-    buildRing(innerRing, 10, 5, 5, x, y, z, 0xFF00FF);
-    createParametricObjects(outerRing, 17.5);
-    createParametricObjects(midRing, 12.5);
-    createParametricObjects(innerRing, 7.5);
+    buildRing(outerRing, 20 , 15, 5, x, y, z, BRIGHT_ORANGE_RED  );
+    buildRing(midRing, 15, 10, 5, x, y, z, WHITE );
+    buildRing(innerRing, 10, 5, 5, x, y, z, BRIGHT_ORANGE_RED );
+    createParametricObjects(outerRing, 17.5, 1, WHITE);
+    createParametricObjects(midRing, 12.5, 0.75, LIGHT_BLUE);
+    createParametricObjects(innerRing, 7.5, 0.5, WHITE);
 
     midRing.add(outerRing);
     innerRing.add(midRing);
     rings.add(innerRing);
     carousel.add(rings);
     rings.position.set(x, y, z);
-
-    
 }
 
 //CENTER DISK
 function createDisk(x, y, z) {
     center_disk = new THREE.Object3D();
-    buildCylinder(center_disk, x, y, z, 5, 5, 5, 0x00FF00);
+    buildCylinder(center_disk, x, y, z, 10, 5, 5, LIGHT_BLUE);
     createMobiusStrip(center_disk);
     carousel.add(center_disk);
 }
@@ -284,7 +296,7 @@ function createDisk(x, y, z) {
 function createCarousel(x, y, z) {
     carousel = new THREE.Object3D();
     createRings(0, 0, 0);
-    createDisk(0, -2.5, 0);
+    createDisk(0, 0, 0);
 
     carousel.position.set(x, y, z);
     scene.add(carousel);    
@@ -316,7 +328,7 @@ function createSkydome(x, y, z) {
 //GROUND
 function createGround(x, y, z) {
     const groundGeometry = new THREE.PlaneGeometry(200, 200);
-    const groundMaterial = new materialTypes[currentMaterialIndex]({ color: 0x0000FF, side: THREE.DoubleSide, wireframe: wireframe});
+    const groundMaterial = new materialTypes[currentMaterialIndex]({ color: BLUE, side: THREE.DoubleSide, wireframe: wireframe});
     const ground = new THREE.Mesh(groundGeometry, groundMaterial);
     ground.rotation.x = Math.PI / 2 ; // Rotate the ground to be horizontal
     ground.position.set(x, y, z); // Set the position of the ground
@@ -340,16 +352,13 @@ function createCameras() {
     'use strict';
 
     camera1 = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 1, 1000);
-    camera1.position.set(0, 50, 0);
+    camera1.position.set(30, 30, 30);
     camera1.lookAt(0, 0, 0);
 
     camera2 = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera2.position.set(0, 1.6, 3); // Adjust as needed
+    camera2.position.set(0, 6.6, 3);       // center_disk.height/2 + 1.6
     document.body.appendChild(VRButton.createButton(renderer));
     renderer.xr.enabled = true;
-
-    
-
 
     cameras.push(camera1);
     cameras.push(camera2);
@@ -360,7 +369,7 @@ function createCameras() {
 // Function to create global lighting
 function createLighting() {
     // Directional light
-    directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+    directionalLight = new THREE.DirectionalLight(WHITE, 1);
     directionalLight.position.set(20, 20, 20); // Set the position of the light
     scene.add(directionalLight);
 
@@ -369,10 +378,10 @@ function createLighting() {
     scene.add(ambientLight);
 
     for (let i = 0; i < 8; i++) {
-        const pointLight = new THREE.SpotLight(0xffffff, 1, 100,);
-        const pos_x = 5 * Math.cos(i * Math.PI / 4);
-        const pos_z = 5 * Math.sin(i * Math.PI / 4);
-        pointLight.position.set(pos_x, 0, pos_z);
+        const pointLight = new THREE.PointLight(WHITE, 2.5, 100);
+        const pos_x = 4 * Math.cos(i * Math.PI / 4);
+        const pos_z = 4 * Math.sin(i * Math.PI / 4);
+        pointLight.position.set(pos_x, 5.1, pos_z);
         center_disk.add(pointLight);
         pointLights.push(pointLight);
         //const pointLightHelper = new THREE.PointLightHelper( pointLight, 1 );
@@ -381,7 +390,7 @@ function createLighting() {
 
     carousel.traverse(function (child) {
         if (child.isMesh && child.geometry.type == 'ParametricGeometry') {
-            const spotLight = new THREE.SpotLight(0xffffff, 1, 100, Math.PI / 3);
+            const spotLight = new THREE.SpotLight(WHITE, 2.5, 100, Math.PI / 3);
             spotLight.target = child;
             if (child.name != "Mobius") {
                 spotLight.position.set(child.position.x, 0, child.position.z);
@@ -396,37 +405,18 @@ function createLighting() {
 }
 
 
-
-// Function to handle key presses
-function onKeyUp(e) {
-    'use strict';
-    switch (e.keyCode) {
-        //CAMERA Switching 
-        case 49:    // '1' key
-            innerRing_animation = false; 
-            break;
-        case 50:    // '2' key
-            midRing_animation = false;
-            break;
-        case 51:    // '3' key
-            outerRing_animation = false;
-        
-    }
-
-}
-
 // Function to handle key presses
 function onKeyDown(e) {
     'use strict';
     switch (e.keyCode) {
         case 49:    // '1' key
-            innerRing_animation = true; 
+            innerRing_animation = !innerRing_animation; 
             break;
         case 50:    // '2' key
-            midRing_animation = true;
+            midRing_animation = !midRing_animation;
             break;
         case 51:    // '3' key
-            outerRing_animation = true;
+            outerRing_animation = !outerRing_animation;
             break;
         //CAMERA Switching 
         case 52:    // '4' key
@@ -496,26 +486,31 @@ function switchMaterial() {
             if (currentMaterialIndex == 3) {
                 node.material = new materialTypes[currentMaterialIndex]({ side: THREE.DoubleSide, wireframe: wireframe });
             } else switch (node.geometry.type) {
-                case 'ParametricGeometry':
                 case 'CylinderGeometry':
+                    node.material = new materialTypes[currentMaterialIndex]({ color: LIGHT_BLUE, wireframe: wireframe });
+                    break;
+                case 'ParametricGeometry':
                     if (node.name == "Mobius")
-                        node.material = new materialTypes[currentMaterialIndex]({ color: 0xff9100, side: THREE.DoubleSide, wireframe: wireframe });
-                    else node.material = new materialTypes[currentMaterialIndex]({ color: 0x00FF00, side: THREE.DoubleSide, wireframe: wireframe });
+                        node.material = new materialTypes[currentMaterialIndex]({ color: ORANGE, side: THREE.DoubleSide, wireframe: wireframe });
+                    else if (node.parent == outerRing || node.parent == innerRing) 
+                        node.material = new materialTypes[currentMaterialIndex]({ color: WHITE, side: THREE.DoubleSide, wireframe: wireframe });
+                    else if (node.parent == midRing) 
+                        node.material = new materialTypes[currentMaterialIndex]({ color: LIGHT_BLUE, side: THREE.DoubleSide, wireframe: wireframe });
                     break;
                 case 'ExtrudeGeometry':
                     if (node == outerRing.children[0])
-                        node.material = new materialTypes[currentMaterialIndex]({ color: 0xFFFF00, wireframe: wireframe });
+                        node.material = new materialTypes[currentMaterialIndex]({ color: BRIGHT_ORANGE_RED, wireframe: wireframe });
                     if (node == midRing.children[0])
-                        node.material = new materialTypes[currentMaterialIndex]({ color: 0x00FFFF, wireframe: wireframe });
+                        node.material = new materialTypes[currentMaterialIndex]({ color: WHITE, wireframe: wireframe });
                     if (node == innerRing.children[0])
-                        node.material = new materialTypes[currentMaterialIndex]({ color: 0xFF00FF, wireframe: wireframe });
+                        node.material = new materialTypes[currentMaterialIndex]({ color: BRIGHT_ORANGE_RED, wireframe: wireframe });
                     break; 
             }
         }
     });
 
     scene.children[0].material = new materialTypes[currentMaterialIndex]({ map: skydomeTexture, side: THREE.BackSide, wireframe: wireframe});   // Skydome
-    scene.children[1].material = new materialTypes[currentMaterialIndex]({ color: 0x0000FF, side: THREE.DoubleSide, wireframe: wireframe});     // Plane
+    scene.children[1].material = new materialTypes[currentMaterialIndex]({ color: BLUE, side: THREE.DoubleSide, wireframe: wireframe});     // Plane
 }
 
 // Function to resize the window
@@ -550,14 +545,13 @@ function init() {
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
-    renderer.setClearColor(0x000000, 0); // Set clear color to transparent
+    renderer.setClearColor(BLACK, 0); // Set clear color to transparent
     console.log("Renderer initialized:", renderer);
 
     createCameras(); // Create the camera
     createScene(); // Create the scene
     createLighting();
     document.addEventListener("keydown", onKeyDown);
-    document.addEventListener("keyup", onKeyUp);
     window.addEventListener("resize", onResize);
 }
 
@@ -567,12 +561,26 @@ function mobius_animate(deltaTime) {
 }
 
 function parametric_animate(deltaTime) {
+    innerRing.traverse((child) => {
+        if(child.isMesh) {
+        if(child.geometry.type == 'ParametricGeometry') {
+            if (child.rotationMode.includes('-X')) {
+                child.rotation.x -= 0.75 * deltaTime;
+            } 
+            else if (child.rotationMode.includes('X')) {
+                child.rotation.x += 0.75 * deltaTime;
+            }
 
-    for (var i=1; i<9; i++) {
-        innerRing.children[i].rotation.y += PARAM_SPEED * deltaTime;
-        midRing.children[i].rotation.y -= PARAM_SPEED * deltaTime;
-        outerRing.children[i].rotation.y += PARAM_SPEED * deltaTime;
+            if (child.rotationMode.includes('Y')) {
+                child.rotation.y += 0.75 * deltaTime;
+            }
+            if (child.rotationMode.includes('Z')) {
+                child.rotation.z += 0.75 * deltaTime;
+            }
+            
+        }
     }
+    });
 }
 
 // Function to initialize the scene, camera, and renderer
@@ -612,7 +620,7 @@ function innerRing_animate(deltaTime) {
     const cdiskWorldPosition = new THREE.Vector3();
     center_disk.getWorldPosition(cdiskWorldPosition);
 
-    if (innerRingWorldPosition.y >= cdiskWorldPosition.y + 5)
+    if (innerRingWorldPosition.y >= cdiskWorldPosition.y + 10)
         upInner = false;
     else if (innerRingWorldPosition.y <= cdiskWorldPosition.y - 5)
         upInner = true;
